@@ -41,11 +41,17 @@ public class RC4CryptoAPIProvider extends EncryptionProvider
   
   private final EncryptionHeader _header;
   private final EncryptionVerifier _verifier;
+  
+  /**
+   * Hash of the salt + key, that everything else is based on
+   */
   private final byte[] _baseHash;
   private final int _encKeyByteSize;
   private final byte[] _pwdBytes;
+  
+  private final byte[] _pageEncodingKey;
 
-  public RC4CryptoAPIProvider(ByteBuffer encProvBuf, byte[] pwdBytes) 
+  public RC4CryptoAPIProvider(ByteBuffer encProvBuf, byte[] pwdBytes, byte[] pageEncodingKey) 
   {
     _pwdBytes = pwdBytes;
     _header = readEncryptionHeader(encProvBuf);
@@ -81,6 +87,8 @@ public class RC4CryptoAPIProvider extends EncryptionProvider
         digest, _verifier.getSalt(), pwdBytes);
     // FIXME, something diff for 40 bits here?
     _encKeyByteSize = _header.getKeySize() / 8;
+    
+    _pageEncodingKey = pageEncodingKey;
   }
 
   @Override
@@ -95,10 +103,23 @@ public class RC4CryptoAPIProvider extends EncryptionProvider
 
   @Override
   protected byte[] getEncryptionKey(int pageNumber) {
+
+    byte[] pageBytes;
+    
+    // Page 0 is special and does not use page encoding key
+    if(pageNumber == 0)
+    {
+      pageBytes = int2bytes(pageNumber);
+    }
+    else
+    {
+      pageBytes = BaseCryptCodecHandler.applyPageNumber(_pageEncodingKey, 0, pageNumber);
+    }
+    
     // OC: 2.3.5.2 (part 2)
     byte[] encKey = BaseCryptCodecHandler.hash(getDigest(), 
                                                _baseHash,
-                                               int2bytes(pageNumber), 
+                                               pageBytes,
                                                _encKeyByteSize);
     if(_header.getKeySize() == 40) {
       encKey = ByteUtil.copyOf(encKey, 128/8);

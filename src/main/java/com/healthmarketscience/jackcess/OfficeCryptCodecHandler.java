@@ -37,7 +37,8 @@ public class OfficeCryptCodecHandler extends BaseCryptCodecHandler
   private final EncryptionProvider _provider;
 
   private OfficeCryptCodecHandler(PageChannel channel, String password, 
-                                  Charset charset, ByteBuffer buffer) 
+                                  Charset charset, ByteBuffer buffer,
+                                  byte[] pageEncodingKey) 
   {
     super(channel);
 
@@ -57,7 +58,7 @@ public class OfficeCryptCodecHandler extends BaseCryptCodecHandler
     
     System.out.println("FOO info: " + ByteUtil.toHexString(encProvBuf, 0, encProvBuf.remaining()));
 
-    _provider = EncryptionProvider.create(encProvBuf, password);
+    _provider = EncryptionProvider.create(encProvBuf, password, pageEncodingKey);
   }
 
   public static CodecHandler create(String password, PageChannel channel,
@@ -67,14 +68,16 @@ public class OfficeCryptCodecHandler extends BaseCryptCodecHandler
     ByteBuffer buffer = readHeaderPage(channel);
     JetFormat format = channel.getFormat();
 
-    // the encoding key indicates whether or not the db is encoded (but is
-    // otherwise meaningless?)
+    /*
+     * The encoding key indicates when db is encoded.
+     * It also used in page decryption key derivation  
+     */
     byte[] encodingKey = ByteUtil.getBytes(
         buffer, format.OFFSET_ENCODING_KEY,
         JetCryptCodecHandler.ENCODING_KEY_LENGTH);
 
     return (isBlankKey(encodingKey) ? DefaultCodecProvider.DUMMY_HANDLER :
-            new OfficeCryptCodecHandler(channel, password, charset, buffer));
+            new OfficeCryptCodecHandler(channel, password, charset, buffer, encodingKey));
   }
 
   public boolean canEncodePartialPage() {

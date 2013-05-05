@@ -54,7 +54,7 @@ public abstract class EncryptionProvider
   }
 
   public static EncryptionProvider create(ByteBuffer encProvBuf, 
-                                          String password)
+                                          String password, byte[] pageEncodingKey)
   {
     // read encoding provider version
     // uint (2.1.4 Version)
@@ -97,7 +97,7 @@ public abstract class EncryptionProvider
 
         } else {
           // OC: 2.3.5.1 - RC4 CryptoAPI Encryption: (2,3,4),2
-          provider = new RC4CryptoAPIProvider(encProvBuf, pwdBytes);
+          provider = new RC4CryptoAPIProvider(encProvBuf, pwdBytes, pageEncodingKey);
         }
       }
     }
